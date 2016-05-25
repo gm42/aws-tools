@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ $# -eq 0 -o $# -gt 2 ]; then
+	echo "Usage: pick-aws cluster-name [container-name]" 1>&2
+	exit 1
+fi
+
+CLUSTER="$1"
+CNAME="$2"
+
+set -e
+set -o pipefail
+
+if [ ! -z "$CNAME" ]; then
+	JQF="select(.tasks[0].overrides.containerOverrides[0].name == \"$CNAME\")"
+else
+	JQF=""
+fi
+
+TASKS=""
+I=0
+for task in $(aws ecs list-tasks --cluster "$CLUSTER" | jq -r '.taskArns[]' | awk -F/ '{ print $NF }'); do
+	aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$task" | jq "$JQF"
+done
