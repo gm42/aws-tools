@@ -20,5 +20,5 @@ fi
 TASKS=""
 I=0
 for task in $(aws ecs list-tasks --cluster "$CLUSTER" | jq -r '.taskArns[]' | awk -F/ '{ print $NF }'); do
-	aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$task" | jq "$JQF"
-done
+	echo "aws ecs describe-tasks --cluster '$CLUSTER' --tasks '$task' | jq -r '$JQF'"
+done | coshell --deinterlace
