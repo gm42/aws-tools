@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ $# -lt 1 ]; then
+	echo "Usage: cccheck binary-name [TIME_WAIT]" 1>&2
+	exit 1
+fi
+
+BINN="$1"
+ST="$2"
+
+CID=$(docker ps | grep -F "$BINN" | awk '{ print $NF}')
+
+if [ -z "$CID" ]; then
+	echo "no $BINN containers"
+	exit
+fi
+
+CIP=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CID)
+
+if [ ! -z "$ST" ]; then
+	grep -F "$ST" /proc/net/ip_conntrack | grep -F "src=$CIP" | wc -l
+else
+	grep -F "src=$CIP" /proc/net/ip_conntrack | wc -l
+fi
