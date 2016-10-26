@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ $# -eq 0 -o $# -gt 2 ]; then
+	echo "Usage: ec2-find environment [purpose]" 1>&2
+	exit 1
+fi
+
+ENV="$1"
+PURPOSE="$2"
+
+set -e
+set -o pipefail
+
+if [ ! -z "$PURPOSE" ]; then
+	PURPOSE=" select( .Tags[] | select( .Key == \"Purpose\") | select( .Value == \"$PURPOSE\") ) | "
+fi
+
+QUERY='.Reservations[] | .Instances[] |'
+QUERY+="$PURPOSE"
+QUERY+='select( .Tags[] | select( .Key == "Environment") | select( .Value == "'
+QUERY+=$ENV
+QUERY+='") ) | (.Tags[] | select( .Key == "Environment") | .Value) + " " + .InstanceId + " " + .PrivateIpAddress'
+
+aws ec2 describe-instances | jq -r "$QUERY"

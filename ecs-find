@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -eq 0 -o $# -gt 2 ]; then
-	echo "Usage: pick-aws cluster-name [container-name]" 1>&2
+	echo "Usage: ecs-find cluster-name [container-name]" 1>&2
 	exit 1
 fi
 
