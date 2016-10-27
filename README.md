@@ -48,3 +48,11 @@ $ ecs-find my-services awesome-app
   ]
 }
 ```
+
+# ec2-find
+
+Find EC2 instances based on two tags (Environment, Purpose).
+
+# ec2-run
+
+Find instances with ec2-find, then run a script on them. Extra arguments are passed as they are to the remotely-uploaded script.

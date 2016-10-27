@@ -1,24 +1,42 @@
 #!/bin/bash
+## cccheck
+##
+## Check for connections of a specific container across EC2 (ECS/docker) instances
+## Will not fail if no containers are found
+##
+#
 
-if [ $# -lt 1 ]; then
-	echo "Usage: cccheck binary-name [TIME_WAIT]" 1>&2
+if [ $# -eq 1 -o $# -eq 2 ]; then
+	echo -n
+else
+	echo "Usage: cccheck container-name1[,container-name-2,container-name3...container-name-N] [TIME_WAIT]" 1>&2
 	exit 1
 fi
 
-BINN="$1"
+CONTAINERS="$1" ## container names
 ST="$2"
 
-CID=$(docker ps | grep -F "$BINN" | awk '{ print $NF}')
+TMPF=$(mktemp)
 
-if [ -z "$CID" ]; then
-	echo "no $BINN containers"
-	exit
-fi
-
-CIP=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CID)
-
+## access ip_conntrack via sudo only once
 if [ ! -z "$ST" ]; then
-	grep -F "$ST" /proc/net/ip_conntrack | grep -F "src=$CIP" | wc -l
+	sudo grep -F "$ST" /proc/net/ip_conntrack >> "$TMPF" || exit $?
 else
-	grep -F "src=$CIP" /proc/net/ip_conntrack | wc -l
+	sudo cat /proc/net/ip_conntrack >> "$TMPF" || exit $?
 fi
+
+## split by comma
+IFS=',' read -a CONTAINERS <<< "$CONTAINERS"
+
+for CNAME in ${CONTAINERS[@]}; do
+	CID=$(docker ps | awk '{ print $NF}' | grep -F "$CNAME")
+	if [ -z "$CID" ]; then
+		## no match is not an error
+		continue
+	fi
+	CIP=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CID) || exit $?
+	echo -n -e "$HOSTNAME\t$CID\t$CNAME: "
+	grep -F "src=$CIP" "$TMPF" | wc -l
+done
+
+rm "$TMPF"

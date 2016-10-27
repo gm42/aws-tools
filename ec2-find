@@ -1,4 +1,9 @@
 #!/bin/bash
+## ec2-find
+##
+## Find EC2 instances matching on 2 specific tags (Environment, Purpose); Purpose is optional
+##
+#
 
 if [ $# -eq 0 -o $# -gt 2 ]; then
 	echo "Usage: ec2-find environment [purpose]" 1>&2

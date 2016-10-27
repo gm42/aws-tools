@@ -1,0 +1,60 @@
+#!/bin/bash
+
+if [ $# -lt 4 ]; then
+	echo "Usage: [WATCH=3] ec2-run.sh environment purpose ssh-user script.sh [arg1] [arg2] [...] [argN]" 1>&2
+	echo "Specifying a WATCH environment variable will loop with \$WATCH interval" 1>&2
+	exit 1
+fi
+
+ENVIRONMENT="$1"
+PURPOSE="$2"
+USR="$3"
+SCRIPT="$4"
+shift 4
+## all the other arguments are passed as they are
+
+SNAME="$(basename $SCRIPT)"
+
+function remote_run(){
+	## run script on each host
+	for HOST in $HOSTS; do
+		echo ssh -q "${USR}@$HOST" "/tmp/${RID}-${SNAME}" $@
+	done | coshell
+}
+
+set -e
+
+## create a random prefix for the script
+RID=$RANDOM
+echo -n "Getting matching EC2 hosts..."
+HOSTS=$(ec2-find "$ENVIRONMENT" "$PURPOSE" | awk '{ print $NF }')
+echo "OK"
+
+## first copy script in each host
+for HOST in $HOSTS; do
+	scp -q "$SCRIPT" "${USR}@$HOST:/tmp/${RID}-${SNAME}"
+done
+
+set +e
+
+if [ -z "$WATCH" ]; then
+	remote_run $@
+	RV=$?
+else
+	while true; do
+		remote_run $@
+		RV=$?
+		if [ ! $RV -eq 0 ]; then
+			break
+		fi
+		echo "--- commands run finished at $(date)"
+		sleep $WATCH
+	done
+fi
+
+## remove temporary script
+for HOST in $HOSTS; do
+	ssh -q "${USR}@$HOST" rm "/tmp/${RID}-${SNAME}"
+done
+
+exit $RV
