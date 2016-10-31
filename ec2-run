@@ -43,6 +43,7 @@ echo "OK"
 
 if [ ! -z "$SCRIPT" ]; then
 	## first copy script in each host
+	## a serial operation will also allow for SSH key ACKs
 	for HOST in $HOSTS; do
 		echo "scp -q '$SCRIPT' '${USR}@$HOST:/tmp/${RID}-${SNAME}'"
 	done | coshell --deinterlace

@@ -38,9 +38,11 @@ fi
 IFS=',' read -a CONTAINERS <<< "$CONTAINERS"
 
 for CNAME in ${CONTAINERS[@]}; do
-	for CID in $(docker ps | awk '{ print $NF}' | grep "^$CNAME"); do
+	for IMGCID in $(docker ps | awk '{ printf "%s=%s\n", $NF, $2}' | grep "^$CNAME"); do
+		CID=$(echo "$IMGCID" | awk -F= '{ print $1} ')
+		IMAGE=$(echo "$IMGCID" | awk -F= '{ print $2} '| awk -F/ '{ print $NF}')
 		CIP=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CID) || exit $?
-		printf "%s\t%.${PAD}s\t\t" ${IPv4} $CID
+		printf "%s\t%.${PAD}s\t\t%s\t" ${IPv4} $IMAGE $CID
 		grep -F "src=$CIP" "$TMPF" | wc -l
 	done
 done
