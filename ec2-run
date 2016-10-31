@@ -60,6 +60,7 @@ if [ -z "$WATCH" ]; then
 else
 	while true; do
 		clear
+		echo "Every ${WATCH}s: $SCRIPT $@"
 		if [ -z "$SCRIPT" ]; then
 			run_inline_on_all "$@"
 		else
