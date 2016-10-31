@@ -6,15 +6,24 @@
 ##
 #
 
-if [ $# -eq 1 -o $# -eq 2 ]; then
-	echo -n
-else
+if [ $# -eq 0 -o $# -gt 2 ]; then
 	echo "Usage: cccheck container-name1[,container-name-2,container-name3...container-name-N] [TIME_WAIT]" 1>&2
 	exit 1
 fi
 
 CONTAINERS="$1" ## container names
-ST="$2"
+ST="$2" ## optional
+
+## program starts here
+
+PAD=45
+
+## get own IP
+IPv4=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
+if [ -z "$IPv4" ]; then
+	echo "ERROR: could not get IPv4 of eth0" 1>&2
+	exit 1
+fi
 
 TMPF=$(mktemp)
 
@@ -29,13 +38,13 @@ fi
 IFS=',' read -a CONTAINERS <<< "$CONTAINERS"
 
 for CNAME in ${CONTAINERS[@]}; do
-	CID=$(docker ps | awk '{ print $NF}' | grep -F "$CNAME")
+	CID=$(docker ps | awk '{ print $NF}' | grep "^$CNAME")
 	if [ -z "$CID" ]; then
 		## no match is not an error
 		continue
 	fi
 	CIP=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CID) || exit $?
-	echo -n -e "$HOSTNAME\t$CID\t$CNAME: "
+	printf "%s\t%.${PAD}s\t\t" ${IPv4} $CID
 	grep -F "src=$CIP" "$TMPF" | wc -l
 done
 

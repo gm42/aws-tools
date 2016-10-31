@@ -9,40 +9,62 @@ fi
 ENVIRONMENT="$1"
 PURPOSE="$2"
 USR="$3"
-SCRIPT="$4"
-shift 4
+shift 3
 ## all the other arguments are passed as they are
 
-SNAME="$(basename $SCRIPT)"
+## if first argument is '-f' then will use a local file as payload
+if [[ "$1" = "-f" ]]; then
+	SCRIPT="$2"
+	shift 2
+	SNAME="$(basename $SCRIPT)"
+	## create a random prefix for the script
+	RID=$RANDOM
+fi
 
-function remote_run(){
+function run_script_on_all(){
 	## run script on each host
 	for HOST in $HOSTS; do
-		echo ssh -q "${USR}@$HOST" "/tmp/${RID}-${SNAME}" $@
-	done | coshell
+		ssh -q "${USR}@$HOST" "/tmp/${RID}-${SNAME}" "$@"
+	done
+}
+
+function run_inline_on_all(){
+	## run script on each host
+	for HOST in $HOSTS; do
+		ssh -q "${USR}@$HOST" "$@"
+	done
 }
 
 set -e
 
-## create a random prefix for the script
-RID=$RANDOM
 echo -n "Getting matching EC2 hosts..."
 HOSTS=$(ec2-find "$ENVIRONMENT" "$PURPOSE" | awk '{ print $NF }')
 echo "OK"
 
-## first copy script in each host
-for HOST in $HOSTS; do
-	scp -q "$SCRIPT" "${USR}@$HOST:/tmp/${RID}-${SNAME}"
-done
+if [ ! -z "$SCRIPT" ]; then
+	## first copy script in each host
+	for HOST in $HOSTS; do
+		echo "scp -q '$SCRIPT' '${USR}@$HOST:/tmp/${RID}-${SNAME}'"
+	done | coshell --deinterlace
+fi
 
 set +e
 
 if [ -z "$WATCH" ]; then
-	remote_run $@
+	if [ -z "$SCRIPT" ]; then
+		run_inline_on_all "$@"
+	else
+		run_script_on_all "$@"
+	fi
 	RV=$?
 else
 	while true; do
-		remote_run $@
+		clear
+		if [ -z "$SCRIPT" ]; then
+			run_inline_on_all "$@"
+		else
+			run_script_on_all "$@"
+		fi
 		RV=$?
 		if [ ! $RV -eq 0 ]; then
 			break
@@ -52,9 +74,11 @@ else
 	done
 fi
 
-## remove temporary script
-for HOST in $HOSTS; do
-	ssh -q "${USR}@$HOST" rm "/tmp/${RID}-${SNAME}"
-done
+if [ ! -z "$SCRIPT" ]; then
+	## remove temporary script
+	for HOST in $HOSTS; do
+		echo ssh -q "${USR}@$HOST" rm "/tmp/${RID}-${SNAME}"
+	done | coshell --deinterlace
+fi
 
 exit $RV
