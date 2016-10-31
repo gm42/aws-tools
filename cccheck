@@ -38,14 +38,11 @@ fi
 IFS=',' read -a CONTAINERS <<< "$CONTAINERS"
 
 for CNAME in ${CONTAINERS[@]}; do
-	CID=$(docker ps | awk '{ print $NF}' | grep "^$CNAME")
-	if [ -z "$CID" ]; then
-		## no match is not an error
-		continue
-	fi
-	CIP=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CID) || exit $?
-	printf "%s\t%.${PAD}s\t\t" ${IPv4} $CID
-	grep -F "src=$CIP" "$TMPF" | wc -l
+	for CID in $(docker ps | awk '{ print $NF}' | grep "^$CNAME"); do
+		CIP=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CID) || exit $?
+		printf "%s\t%.${PAD}s\t\t" ${IPv4} $CID
+		grep -F "src=$CIP" "$TMPF" | wc -l
+	done
 done
 
 rm "$TMPF"
