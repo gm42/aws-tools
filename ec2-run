@@ -42,8 +42,11 @@ HOSTS=$(ec2-find "$ENVIRONMENT" "$PURPOSE" | awk '{ print $NF }')
 echo "OK"
 
 if [ ! -z "$SCRIPT" ]; then
+	## a serial operation will allow for SSH key ACKs
+	for HOST in $HOSTS; do
+		ssh "${USR}@$HOST" echo "$HOST: OK"
+	done
 	## first copy script in each host
-	## a serial operation will also allow for SSH key ACKs
 	for HOST in $HOSTS; do
 		echo "scp -q '$SCRIPT' '${USR}@$HOST:/tmp/${RID}-${SNAME}'"
 	done | coshell --deinterlace
