@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 4 ]; then
-	echo "Usage: [WATCH=3] ec2-run.sh environment purpose ssh-user script.sh [arg1] [arg2] [...] [argN]" 1>&2
+	echo "Usage: [WATCH=3] ec2-run.sh environment purpose ssh-user [-f script.sh | command] [arg1] [arg2] [...] [argN]" 1>&2
 	echo "Specifying a WATCH environment variable will loop with \$WATCH interval" 1>&2
 	exit 1
 fi
