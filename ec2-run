@@ -24,8 +24,9 @@ fi
 function run_script_on_all(){
 	## run script on each host
 	for HOST in $HOSTS; do
-		ssh -q "${USR}@$HOST" "/tmp/${RID}-${SNAME}" "$@"
-	done
+		echo -n "ssh -q '${USR}@$HOST' '/tmp/${RID}-${SNAME}' "
+		echo "$@"
+	done | coshell --deinterlace
 }
 
 function run_inline_on_all(){
@@ -62,19 +63,27 @@ if [ -z "$WATCH" ]; then
 	fi
 	RV=$?
 else
+	TMPF=$(mktemp)
+	function remove_tmp() {
+		rm "$TMPF"
+	}
+	trap remove_tmp EXIT
+
 	while true; do
-		clear
-		echo "Every ${WATCH}s: $SCRIPT $@"
+		echo "Every ${WATCH}s: $SCRIPT $@" > "$TMPF"
 		if [ -z "$SCRIPT" ]; then
-			run_inline_on_all "$@"
+			run_inline_on_all "$@" 2>&1 >> "$TMPF"
+			RV=$?
 		else
-			run_script_on_all "$@"
+			run_script_on_all "$@" 2>&1 >> "$TMPF"
+			RV=$?
 		fi
-		RV=$?
+		echo "--- commands run finished at $(date) (exit code = $RV)" >> "$TMPF"
+		clear
+		cat "$TMPF"
 		if [ ! $RV -eq 0 ]; then
 			break
 		fi
-		echo "--- commands run finished at $(date)"
 		sleep $WATCH
 	done
 fi

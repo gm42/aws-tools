@@ -45,6 +45,6 @@ for CNAME in ${CONTAINERS[@]}; do
 		printf "%s\t%.${PAD}s\t\t%s\t" ${IPv4} $IMAGE $CID
 		grep -F "src=$CIP" "$TMPF" | wc -l
 	done
-done
+done | sort -V -k2
 
 rm "$TMPF"
