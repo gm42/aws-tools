@@ -19,11 +19,16 @@ for id in $(ec2-find "$@" | awk '{ print $2 }'); do
 	echo "$id $id"
 done > "$TMPF"
 
+id=$(awk '{ print $1 }' "$TMPF")
+
+if [ -z "$id" ]; then
+	echo "ERROR: no match" 1>&2
+	exit 1
+fi
+
 if [ $(wc -l < "$TMPF") -gt 1 ]; then
-	dialog --clear --backtitle "Backtitle here" --title "Show system log" --menu "Choose one of the matching EC2 instances:" 15 40 4 $(< "$TMPF") 2> "$TMPF"
+	dialog --clear --title "Show system log" --menu "Choose one of the matching EC2 instances:" 15 40 4 $(< "$TMPF") 2> "$TMPF"
 	id=$(< "$TMPF")
-else
-	id=$(awk '{ print $1 }' "$TMPF")
 fi
 rm "$TMPF"
 
