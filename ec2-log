@@ -1,0 +1,35 @@
+#!/bin/bash
+## ec2-log
+##
+## Display EC2 instances system log; if more than one instance is found, shows a menu from where to select an instance.
+##
+#
+
+if [ $# -eq 0 -o $# -gt 2 ]; then
+	echo "Usage: ec2-log environment [purpose]" 1>&2
+	exit 1
+fi
+
+set -e
+set -o pipefail
+
+TMPF=$(mktemp /tmp/awstools.XXXXX)
+
+for id in $(ec2-find "$@" | awk '{ print $2 }'); do
+	echo "$id $id"
+done > "$TMPF"
+
+id=$(awk '{ print $1 }' "$TMPF")
+
+if [ -z "$id" ]; then
+	echo "ERROR: no match" 1>&2
+	exit 1
+fi
+
+if [ $(wc -l < "$TMPF") -gt 1 ]; then
+	dialog --clear --title "Show system log" --menu "Choose one of the matching EC2 instances:" 15 40 4 $(< "$TMPF") 2> "$TMPF"
+	id=$(< "$TMPF")
+fi
+rm "$TMPF"
+
+exec aws ec2 get-console-output --instance-id $id | jq -r '.Output'
