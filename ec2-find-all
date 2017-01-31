@@ -9,6 +9,6 @@ set -e
 set -o pipefail
 
 QUERY='.Reservations[] | .Instances[] | '
-QUERY+=' .PrivateIpAddress + "\t" + .InstanceId + "\t" + (.Tags[] | select( .Key == "Environment") | .Value) + "\t" + (.Tags[] | select( .Key == "Purpose") | .Value)'
+QUERY+=' .PrivateIpAddress + "\t" + .InstanceId + "\t" + (.Tags[] | select( .Key == "Environment") | .Value) + "\t" + (.Tags[] | select( .Key == "Purpose") | .Value) + "\t" + .State.Name'
 
 aws ec2 describe-instances | jq -r "$QUERY"
